@@ -1,112 +1,387 @@
-```react
-import React, { useState, useEffect } from 'react';
-import { 
-  Wallet, 
-  PiggyBank, 
-  Plus, 
-  Trash2, 
-  TrendingUp, 
-  TrendingDown,
-  Info, 
-  Award, 
-  Percent, 
-  Sparkles, 
-  CheckCircle2, 
-  HelpCircle, 
-  ChevronDown, 
-  ChevronUp, 
-  BookOpen, 
-  Coins, 
-  Calendar,
-  HeartHandshake,
-  ShoppingBag,
-  AlertTriangle
-} from 'lucide-react';
+```html
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portfel Jacka - Cel: Bambu Lab A1 Mini</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* Niestandardowy styl dla suwaków przewijania w ciemnym motywie */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #020617;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen pb-16 selection:bg-teal-400 selection:text-slate-950">
 
-export default function App() {
-  // --- Stan aplikacji (zapisywany w localStorage) ---
-  
-  // Konta (skarbonki) - puste na start, Jacek dodaje swoje własne
-  const [accounts, setAccounts] = useState(() => {
-    const saved = localStorage.getItem('jacek_wallet_accounts');
-    return saved ? JSON.parse(saved) : [];
-  });
+  <!-- TOAST POWIADOMIENIE -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 bg-teal-400 text-slate-950 font-black px-5 py-4 rounded-2xl shadow-2xl flex items-center gap-3 border border-teal-200 hidden transition-all duration-300 transform translate-y-10 opacity-0">
+    <i data-lucide="sparkles" class="w-5 h-5 text-slate-950"></i>
+    <span id="toast-text">Powiadomienie!</span>
+  </div>
 
-  // Kurs wymiany EUR -> PLN
-  const [exchangeRate, setExchangeRate] = useState(() => {
-    const saved = localStorage.getItem('jacek_exchange_rate');
-    return saved ? parseFloat(saved) : 4.30;
-  });
+  <!-- MODAL POTWIERDZENIA USUNIĘCIA -->
+  <div id="delete-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl">
+      <div class="flex items-start gap-4">
+        <div class="bg-rose-500/20 text-rose-400 p-3 rounded-2xl">
+          <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+        </div>
+        <div class="flex-1">
+          <h4 class="text-lg font-extrabold text-white">Czy chcesz usunąć tę skarbonkę?</h4>
+          <p class="text-sm text-slate-400 mt-2">
+            Zamierzasz usunąć skarbonkę <strong id="delete-account-name" class="text-slate-250">""</strong>. Wszystkie zgromadzone na niej oszczędności zostaną usunięte bezpowrotnie.
+          </p>
+        </div>
+      </div>
+      <div class="flex gap-3 mt-6 justify-end">
+        <button onclick="closeDeleteModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-xl font-bold text-xs transition">
+          Anuluj
+        </button>
+        <button id="confirm-delete-btn" class="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-bold text-xs transition">
+          Tak, usuń
+        </button>
+      </div>
+    </div>
+  </div>
 
-  // Punkty Maker World (490 punktów = kupon 40 EUR)
-  const [makerWorldPoints, setMakerWorldPoints] = useState(() => {
-    const saved = localStorage.getItem('jacek_mw_points');
-    return saved ? parseInt(saved, 10) : 0;
-  });
+  <!-- NAGŁÓWEK -->
+  <header class="bg-slate-900/60 border-b border-slate-850 sticky top-0 z-40 backdrop-blur-lg">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+      
+      <div class="flex items-center gap-3">
+        <div class="bg-gradient-to-tr from-teal-500 to-emerald-400 p-2.5 rounded-2xl shadow-lg shadow-teal-500/10 text-slate-950">
+          <i data-lucide="wallet" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-black tracking-wider text-white uppercase flex items-center gap-2">
+            Skarbonka Jacka <span class="text-teal-400 text-[10px] px-2 py-0.5 bg-teal-500/10 rounded-full font-semibold normal-case">Wersja Końcowa</span>
+          </h1>
+          <p class="text-[11px] text-slate-400">Zarobki z masaży u mamy, kieszonkowe na zakupy i punkty Maker World</p>
+        </div>
+      </div>
 
-  // Czy zniżka 40 EUR z Maker World jest ręcznie wymuszona
-  const [manualDiscount, setManualDiscount] = useState(() => {
-    const saved = localStorage.getItem('jacek_manual_discount');
-    return saved ? JSON.parse(saved) : false;
-  });
+      <div class="flex flex-wrap items-center gap-4 justify-center">
+        <!-- Kurs Euro -->
+        <div class="flex items-center gap-2 bg-slate-950 px-3 py-2 rounded-xl border border-slate-800">
+          <span class="text-[10px] text-slate-500 font-extrabold uppercase tracking-wider">Kurs EUR:</span>
+          <div class="flex items-center gap-1 text-xs">
+            <span class="text-emerald-400 font-bold">1 € =</span>
+            <input 
+              id="exchange-rate-input"
+              type="number" 
+              step="0.01"
+              value="4.30"
+              class="w-14 bg-slate-900 text-white font-black text-center rounded px-1 py-0.5 border border-slate-700 focus:outline-none focus:border-teal-400 transition"
+            />
+            <span class="text-slate-400 font-bold">PLN</span>
+          </div>
+        </div>
 
-  // Historia transakcji (pusta na start)
-  const [history, setHistory] = useState(() => {
-    const saved = localStorage.getItem('jacek_history');
-    return saved ? JSON.parse(saved) : [];
-  });
+        <!-- Łącznie oszczędności -->
+        <div class="flex items-center gap-3 bg-slate-900 px-4 py-2 rounded-xl border border-slate-800">
+          <div class="text-right">
+            <span class="text-[9px] text-slate-500 uppercase font-black block">Całkowity kapitał</span>
+            <span class="text-sm font-black text-white">
+              <span id="total-cap-eur">0.00</span> € <span class="text-teal-400">/ <span id="total-cap-pln">0</span> PLN</span>
+            </span>
+          </div>
+        </div>
+      </div>
 
-  // --- NOWE STANY: PLANER TYGODNIOWY JACKA ---
-  // Zarobek z masaży u mamy na tydzień (PLN)
-  const [weeklyMassageEarnings, setWeeklyMassageEarnings] = useState(() => {
-    const saved = localStorage.getItem('jacek_weekly_massage');
-    return saved ? parseFloat(saved) : 30;
-  });
+    </div>
+  </header>
 
-  // Kwota na drobne, normalne zakupy na tydzień (PLN)
-  const [weeklySpendingCash, setWeeklySpendingCash] = useState(() => {
-    const saved = localStorage.getItem('jacek_weekly_spending');
-    return saved ? parseFloat(saved) : 15;
-  });
+  <!-- GŁÓWNA TREŚĆ -->
+  <main class="max-w-6xl mx-auto px-4 mt-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
+    
+    <!-- LEWA SEKCJA (7 KOLUMN) -->
+    <section class="lg:col-span-7 flex flex-col gap-6">
 
-  // Inne tygodniowe dochody (np. kieszonkowe, dodatkowe obowiązki)
-  const [weeklyOtherEarnings, setWeeklyOtherEarnings] = useState(() => {
-    const saved = localStorage.getItem('jacek_weekly_other');
-    return saved ? parseFloat(saved) : 0;
-  });
+      <!-- CEL: BAMBU LAB A1 MINI -->
+      <div class="bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-850 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-40 h-40 bg-teal-500/5 rounded-full blur-3xl pointer-events-none"></div>
+        
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+          <div class="flex items-center gap-3">
+            <div class="bg-teal-500/10 text-teal-400 p-2.5 rounded-2xl border border-teal-500/20">
+              <i data-lucide="award" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <span class="text-[10px] font-black uppercase tracking-widest text-teal-400">Mój Cel</span>
+              <h2 class="text-xl font-black text-white tracking-wide">Drukarka Bambu Lab A1 Mini</h2>
+            </div>
+          </div>
 
-  // --- Stany pomocnicze UI ---
-  const [newAccName, setNewAccName] = useState('');
-  const [newAccPLN, setNewAccPLN] = useState('');
-  const [newAccEUR, setNewAccEUR] = useState('');
+          <!-- Przełącznik kuponu -->
+          <button 
+            id="discount-toggle-btn"
+            onclick="toggleDiscount()"
+            class="flex items-center gap-2 px-3 py-1.5 rounded-xl text-[11px] font-black transition border bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700"
+          >
+            <i data-lucide="percent" class="w-3.5 h-3.5"></i>
+            <span>Zniżka Maker World (-40 €)</span>
+            <span id="discount-dot" class="w-1.5 h-1.5 rounded-full bg-slate-600"></span>
+          </button>
+        </div>
 
-  const [txDesc, setTxDesc] = useState('');
-  const [txAmount, setTxAmount] = useState('');
-  const [txCurrency, setTxCurrency] = useState('PLN');
-  const [txAccId, setTxAccId] = useState('');
-  const [txType, setTxType] = useState('plus'); // 'plus' lub 'minus'
+        <!-- Wizualizacja ceny -->
+        <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 bg-slate-950/80 p-5 rounded-2xl border border-slate-900 mb-6">
+          <div class="sm:col-span-3 flex justify-center items-center">
+            <div class="w-20 h-20 bg-slate-900 rounded-2xl border border-slate-800 flex items-center justify-center relative shadow-inner">
+              <svg class="w-10 h-10 text-teal-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="4" y1="22" x2="20" y2="22" />
+                <line x1="6" y1="22" x2="6" y2="4" />
+                <line x1="6" y1="4" x2="18" y2="4" />
+                <line x1="18" y1="4" x2="18" y2="8" />
+                <rect x="10" y="10" width="6" height="6" rx="1" fill="currentColor" fill-opacity="0.1" />
+                <path d="M6 14h10" />
+              </svg>
+              <span class="absolute -top-1.5 -right-1.5 bg-teal-400 text-slate-950 text-[8px] font-black px-1.5 py-0.5 rounded-md">
+                A1 Mini
+              </span>
+            </div>
+          </div>
 
-  // Rozwijanie poradnika Maker World i Planera
-  const [showGuide, setShowGuide] = useState(true);
-  const [showPlannerInfo, setShowPlannerInfo] = useState(true);
+          <div class="sm:col-span-9 flex flex-col justify-center text-center sm:text-left">
+            <span class="text-xs text-slate-500 font-bold">Wymagany budżet na zakup:</span>
+            <div class="flex items-baseline justify-center sm:justify-start gap-2 mt-0.5">
+              <span id="target-price-eur-display" class="text-3xl font-black text-white">189 €</span>
+              <span id="target-price-pln-display" class="text-sm text-slate-400 font-medium">(813 PLN)</span>
+            </div>
+            <p id="target-desc" class="text-xs text-slate-400 mt-1.5">
+              Cena katalogowa wynosi 189 €. Zbierz 490 punktów na platformie, by odblokować zniżkę na 139 €!
+            </p>
+          </div>
+        </div>
 
-  // System modalny do usuwania kont
-  const [deleteConfirmModal, setDeleteConfirmModal] = useState({ show: false, accountId: null, accountName: '' });
+        <!-- Pasek postępu -->
+        <div class="space-y-3">
+          <div class="flex justify-between items-end">
+            <span class="text-xs text-slate-400 font-black uppercase">Postęp odkładania</span>
+            <span id="progress-percent" class="text-2xl font-black text-teal-400">0%</span>
+          </div>
 
-  // Powiadomienia (Toast)
-  const [notification, setNotification] = useState(null);
+          <div class="w-full bg-slate-950 h-6 rounded-full p-1 border border-slate-900 relative">
+            <div id="progress-bar-fill" class="bg-gradient-to-r from-teal-500 via-emerald-400 to-teal-300 h-full rounded-full transition-all duration-500 w-0 relative">
+              <span id="progress-ping" class="absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 bg-white rounded-full animate-ping hidden"></span>
+            </div>
+          </div>
 
-  // --- Stałe Bambu Lab A1 Mini ---
-  const BASE_PRICE_EUR = 189;
-  const DISCOUNT_EUR = 40;
-  const POINTS_NEEDED_FOR_DISCOUNT = 490;
+          <!-- Statystyki -->
+          <div class="grid grid-cols-2 gap-4 pt-2">
+            <div class="bg-slate-950/40 p-3 rounded-xl border border-slate-900 text-center sm:text-left">
+              <span class="text-[10px] text-slate-500 uppercase font-bold block">Suma oszczędności</span>
+              <span id="savings-eur" class="text-sm font-black text-emerald-400">0.00 €</span>
+              <span id="savings-pln" class="text-xs text-slate-400 block">0 PLN</span>
+            </div>
+            <div class="bg-slate-950/40 p-3 rounded-xl border border-slate-900 text-center sm:text-left">
+              <span class="text-[10px] text-slate-500 uppercase font-bold block">Brakuje jeszcze tylko</span>
+              <span id="missing-eur" class="text-sm font-black text-teal-400">189.00 €</span>
+              <span id="missing-pln" class="text-xs text-slate-400 block">813 PLN</span>
+            </div>
+          </div>
 
-  // Aktywność zniżki (punkty lub przełącznik manualny)
-  const isDiscountActive = manualDiscount || makerWorldPoints >= POINTS_NEEDED_FOR_DISCOUNT;
-  const targetPriceEUR = isDiscountActive ? (BASE_PRICE_EUR - DISCOUNT_EUR) : BASE_PRICE_EUR;
-  const targetPricePLN = Math.round(targetPriceEUR * exchangeRate);
+          <!-- Sukces -->
+          <div id="success-banner" class="mt-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 p-4 rounded-2xl flex items-center gap-3 hidden">
+            <i data-lucide="check-circle-2" class="w-6 h-6 text-emerald-400 flex-shrink-0"></i>
+            <p class="text-xs font-bold leading-relaxed">
+              Cel osiągnięty! Jacek, masz pełną kwotę na zakup Bambu Lab A1 Mini! Czas na zakupy i pierwsze druki! 🚀🎉
+            </p>
+          </div>
+        </div>
+      </div>
 
-  // --- Efekty zapisu w localStorage (Zapis natychmiastowy!) ---
+      <!-- TYGODNIOWY PLANER JACKA -->
+      <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none"></div>
+
+        <div class="flex justify-between items-center mb-4">
+          <div class="flex items-center gap-2.5">
+            <div class="bg-emerald-500/10 text-emerald-400 p-2 rounded-xl">
+              <i data-lucide="calendar" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h3 class="text-base font-black text-white">Tygodniowy Planer Jacka</h3>
+              <p class="text-xs text-slate-400">Balansowanie zarobków na drukarkę i normalne wydatki</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-5">
+          <div class="bg-slate-950/50 p-4 rounded-2xl border border-slate-850 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            
+            <!-- Zarobek u Mamy -->
+            <div class="space-y-1">
+              <label class="text-[10px] font-black uppercase text-slate-500 flex items-center gap-1">
+                <i data-lucide="heart-handshake" class="w-3 h-3 text-emerald-400"></i> Zarobek u Mamy (masaż)
+              </label>
+              <div class="flex items-center gap-1.5">
+                <input 
+                  id="weekly-massage-input"
+                  type="number"
+                  min="0"
+                  value="30"
+                  class="w-full bg-slate-900 border border-slate-800 text-white font-extrabold text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-400 transition"
+                />
+                <span class="text-xs text-slate-400 font-bold">PLN</span>
+              </div>
+            </div>
+
+            <!-- Kieszonkowe na zakupy -->
+            <div class="space-y-1">
+              <label class="text-[10px] font-black uppercase text-slate-500 flex items-center gap-1">
+                <i data-lucide="shopping-bag" class="w-3 h-3 text-rose-400"></i> Na normalne zakupy
+              </label>
+              <div class="flex items-center gap-1.5">
+                <input 
+                  id="weekly-spending-input"
+                  type="number"
+                  min="0"
+                  value="15"
+                  class="w-full bg-slate-900 border border-slate-800 text-white font-extrabold text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-rose-400 transition"
+                />
+                <span class="text-xs text-slate-400 font-bold">PLN</span>
+              </div>
+            </div>
+
+            <!-- Inne dochody -->
+            <div class="space-y-1">
+              <label class="text-[10px] font-black uppercase text-slate-500">Inne zyski (tydzień)</label>
+              <div class="flex items-center gap-1.5">
+                <input 
+                  id="weekly-other-input"
+                  type="number"
+                  min="0"
+                  value="0"
+                  class="w-full bg-slate-900 border border-slate-800 text-white font-extrabold text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-teal-400 transition"
+                />
+                <span class="text-xs text-slate-400 font-bold">PLN</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Podsumowanie tygodnia -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="bg-slate-950 p-4 rounded-2xl border border-slate-850 flex flex-col justify-between">
+              <div>
+                <span class="text-[10px] text-slate-500 uppercase font-black">Twoja tygodniowa czysta oszczędność:</span>
+                <div id="weekly-savings-display" class="text-2xl font-black text-emerald-400 mt-1">15 PLN</div>
+                <p id="weekly-savings-desc" class="text-[11px] text-slate-400 mt-1">
+                  Zarobisz 30 PLN, odłożysz 15 PLN na wydatki/zakupy.
+                </p>
+              </div>
+            </div>
+
+            <div class="bg-slate-950 p-4 rounded-2xl border border-slate-850 flex flex-col justify-between">
+              <div>
+                <span class="text-[10px] text-slate-500 uppercase font-black">Czas do realizacji celu:</span>
+                <div id="weeks-to-target-display" class="text-2xl font-black text-teal-400 mt-1">--</div>
+                <p class="text-[11px] text-slate-400 mt-1">
+                  Oszczędzając tyle tygodniowo, kupisz swoją drukarkę w takim czasie!
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Automatyczny przelew zysku na skarbonkę -->
+          <div class="bg-slate-950 p-4 rounded-2xl border border-slate-850 flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="text-center sm:text-left">
+              <span class="text-xs font-bold text-white block">Minął tydzień? Przelej oszczędności!</span>
+              <span id="transfer-desc" class="text-[11px] text-slate-400">Przeleje to automatycznie 15 PLN na wybraną skarbonkę.</span>
+            </div>
+            <div class="flex gap-2 w-full sm:w-auto">
+              <select id="weekly-target-select" class="bg-slate-900 border border-slate-800 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-400 transition w-full sm:w-48">
+                <!-- Dynamicznie ładowane skarbonki -->
+              </select>
+              <button onclick="applyWeeklySavings()" class="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black px-4 py-2 rounded-xl text-xs transition shrink-0">
+                Zatwierdź Tydzień
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MAKER WORLD -->
+      <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <div class="flex items-center gap-3">
+            <div class="bg-amber-500/10 text-amber-400 p-2.5 rounded-2xl border border-amber-500/20">
+              <i data-lucide="coins" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <h3 class="text-lg font-black text-white">Punkty Maker World</h3>
+              <p class="text-xs text-slate-400">Uzbieraj 490 pkt na kupon o wartości 40 €</p>
+            </div>
+          </div>
+
+          <!-- Licznik punktów -->
+          <div class="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 self-stretch sm:self-auto justify-between">
+            <span class="text-[10px] text-slate-400 font-bold">Aktualne punkty:</span>
+            <input 
+              id="mw-points-input"
+              type="number" 
+              min="0"
+              value="0"
+              class="w-16 bg-slate-900 text-amber-400 font-black text-center rounded-lg py-1 border border-slate-750 focus:outline-none focus:border-amber-400 transition"
+            />
+            <span class="text-xs text-slate-500 font-bold">/ 490</span>
+          </div>
+        </div>
+
+        <!-- Postęp punktów -->
+        <div class="space-y-2 mb-6">
+          <div class="flex justify-between items-center text-xs">
+            <span class="text-slate-400 font-bold">Postęp kuponu:</span>
+            <span id="mw-points-text" class="text-amber-400 font-black">0 / 490 pkt (0%)</span>
+          </div>
+          <div class="w-full bg-slate-950 h-3 rounded-full overflow-hidden p-0.5 border border-slate-900">
+            <div id="mw-progress-bar" class="bg-gradient-to-r from-amber-500 to-yellow-400 h-full rounded-full transition-all duration-300 w-0"></div>
+          </div>
+          <div id="mw-info-text" class="text-[11px] text-slate-400 flex items-center gap-1.5">
+            <i data-lucide="info" class="w-3.5 h-3.5 text-amber-400 flex-shrink-0"></i>
+            <span>Brakuje Ci jeszcze <strong id="mw-missing-points" class="text-amber-300">490</strong> punktów do zniżki.</span>
+          </div>
+        </div>
+
+        <!-- Poradnik -->
+        <div class="border border-slate-850 rounded-2xl overflow-hidden bg-slate-950/40">
+          <button onclick="toggleGuide()" class="w-full px-4 py-3.5 bg-slate-950/80 hover:bg-slate-950 flex justify-between items-center transition">
+            <span class="text-xs font-black text-slate-200 flex items-center gap-2">
+              <i data-lucide="book-open" class="w-4 h-4 text-teal-400"></i> 
+              JAK ZDOBYWAĆ PUNKTY W MAKER WORLD? (PORADNIK)
+            </span>
+            <i id="guide-arrow" data-lucide="chevron-up" class="w-4 h-4 text-slate-400"></i>
+          </button>
+
+          <div id="guide-content" class="p-4 space-y-4 border-t border-slate-850">
+            <p class="text-xs text-slate-400 leading-relaxed">
+              Każde 490 punktów wymieniasz na kod podarunkowy 40 EUR. Oto jak najszybciej je uzbierać:
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+              
+              <div class="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 flex flex-col justify-between">
+                <div>
+                  <div class="flex justify-between items-start gap-1 mb-1.5">
+                    <span class="text-xs font-black text-white leading-tight">Wrzucenie własnego modelu 3D</span>
+                    <span class="text-[9px] bg-teal-50  // --- Efekty zapisu w localStorage (Zapis natychmiastowy!) ---
   useEffect(() => {
     localStorage.setItem('jacek_wallet_accounts', JSON.stringify(accounts));
   }, [accounts]);
